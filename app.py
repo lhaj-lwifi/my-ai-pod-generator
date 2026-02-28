@@ -5,77 +5,80 @@ import PIL.Image
 import io
 
 # إعداد واجهة الموقع
-st.set_page_config(page_title="Design Ghost 3-Step", layout="wide")
-st.title("🛠️ 3-Step Design Workflow (Pro Edition)")
+st.set_page_config(page_title="Design Ghost Gallery PRO", layout="wide")
+st.title("🎨 3-Step Workflow: Generate, Upscale & Clear")
 
-# القائمة الجانبية للإعدادات
+# القائمة الجانبية
 with st.sidebar:
-    st.header("⚙️ API Configuration")
+    st.header("⚙️ Settings")
     api_key = st.text_input("Enter Google API Key", type="password")
     st.divider()
     pod_style = st.selectbox("Style Preset", 
         ["Vector Sticker", "Vintage Illustration", "Cute Kawaii", "Dark Indie Horror", "SCP Concept"])
+    num_vars = st.slider("Number of Variations", 1, 4, 4)
 
-# إدارة حالة الصور (Memory)
-if 'raw_img' not in st.session_state: st.session_state.raw_img = None
+# إدارة الذاكرة (Session State) باش الصور ما يغبروش
+if 'all_variants' not in st.session_state: st.session_state.all_variants = []
+if 'selected_img' not in st.session_state: st.session_state.selected_img = None
 if 'upscaled_img' not in st.session_state: st.session_state.upscaled_img = None
-if 'final_img' not in st.session_state: st.session_state.final_img = None
+if 'final_png' not in st.session_state: st.session_state.final_png = None
 
-# --- STAGE 1: DESIGN GENERATION ---
-st.header("1️⃣ Step: Generate Design")
-niche_input = st.text_input("Niche Topic:", placeholder="e.g. SCP-049 Plague Doctor")
+# --- STEP 1: GENERATE ALL VARIATIONS ---
+st.header("1️⃣ Step: Generate & Choose")
+niche_input = st.text_input("Design Niche:", placeholder="e.g. SCP-049 Plague Doctor")
 
-if st.button("Generate Image 🚀"):
+if st.button("Generate Variations 🚀"):
     if api_key and niche_input:
         try:
             client = genai.Client(api_key=api_key)
-            with st.spinner("Drawing..."):
-                prompt = f"Professional T-shirt design, '{niche_input}', {pod_style}, white background, bold clean lines, vector art."
-                res = client.models.generate_images(model="imagen-4.0-generate-001", prompt=prompt, config={"number_of_images": 1})
+            with st.spinner(f"Drawing {num_vars} options..."):
+                prompt = f"Professional T-shirt design, '{niche_input}', {pod_style}, white background, bold lines, vector art."
+                res = client.models.generate_images(model="imagen-4.0-generate-001", prompt=prompt, config={"number_of_images": num_vars})
                 
-                # حفظ الصورة الخام
-                img_data = io.BytesIO(res.generated_images.image)
-                st.session_state.raw_img = PIL.Image.open(img_data)
-                # ريست للمراحل الجاية
+                # تخزين كاع الصور كـ PIL Images في الذاكرة
+                st.session_state.all_variants = []
+                for g_img in res.generated_images:
+                    st.session_state.all_variants.append(PIL.Image.open(io.BytesIO(g_img.image)))
+                
+                # ريست للمراحل الأخرى
+                st.session_state.selected_img = None
                 st.session_state.upscaled_img = None
-                st.session_state.final_img = None
+                st.session_state.final_png = None
         except Exception as e:
             st.error(f"Error: {e}")
-    else:
-        st.error("Missing API Key or Niche!")
 
-if st.session_state.raw_img:
-    st.image(st.session_state.raw_img, caption="Raw Generation (1024x1024)", width=300)
+# عرض معرض الصور (Gallery)
+if st.session_state.all_variants:
+    cols = st.columns(2)
+    for idx, pil_img in enumerate(st.session_state.all_variants):
+        with cols[idx % 2]:
+            st.image(pil_img, caption=f"Option {idx+1}", use_container_width=True)
+            if st.button(f"✅ Select Option {idx+1}", key=f"sel_{idx}"):
+                st.session_state.selected_img = pil_img
+                st.success(f"Option {idx+1} selected for next steps!")
 
-    # --- STAGE 2: UPSCALE ---
+# --- STEP 2: UPSCALE SELECTED ---
+if st.session_state.selected_img:
     st.divider()
-    st.header("2️⃣ Step: Upscale to 4500x5400px")
-    if st.button("Upscale for Merch by Amazon 📐"):
-        with st.spinner("Resizing to 4500x5400..."):
-            # تكبير الصورة باستعمال LANCZOS لأفضل جودة حواف
-            st.session_state.upscaled_img = st.session_state.raw_img.resize((4500, 5400), PIL.Image.Resampling.LANCZOS)
-            st.success("Upscaling Complete!")
+    st.header("2️⃣ Step: AI Upscale (4500x5400)")
+    st.image(st.session_state.selected_img, caption="Current Selection", width=300)
+    
+    if st.button("Upscale to 4500x5400px 📐"):
+        with st.spinner("Processing High-Res..."):
+            st.session_state.upscaled_img = st.session_state.selected_img.resize((4500, 5400), PIL.Image.Resampling.LANCZOS)
+            st.success("Upscale Done!")
 
-    if st.session_state.upscaled_img:
-        st.info("Image is now 4500x5400px. High resolution ready.")
+# --- STEP 3: REMOVE BACKGROUND ---
+if st.session_state.upscaled_img:
+    st.divider()
+    st.header("3️⃣ Step: Make Transparent")
+    if st.button("Remove Background ✂️"):
+        with st.spinner("Removing background..."):
+            st.session_state.final_png = remove(st.session_state.upscaled_img)
+            st.success("Design is now Transparent!")
 
-        # --- STAGE 3: REMOVE BACKGROUND ---
-        st.divider()
-        st.header("3️⃣ Step: Remove Background")
-        if st.button("Make Transparent ✂️"):
-            with st.spinner("Removing background..."):
-                st.session_state.final_img = remove(st.session_state.upscaled_img)
-                st.success("Background Removed!")
-
-        if st.session_state.final_img:
-            st.image(st.session_state.final_img, caption="Final Transparent PNG", width=300)
-            
-            # زر التحميل النهائي
-            buf = io.BytesIO()
-            st.session_state.final_img.save(buf, format="PNG")
-            st.download_button(
-                label="📥 Download Final Design",
-                data=buf.getvalue(),
-                file_name=f"{niche_input.replace(' ', '_')}_final.png",
-                mime="image/png"
-            )
+if st.session_state.final_png:
+    st.image(st.session_state.final_png, caption="Final Pro Design", width=300)
+    buf = io.BytesIO()
+    st.session_state.final_png.save(buf, format="PNG")
+    st.download_button("📥 Download Final PNG", buf.getvalue(), f"{niche_input}_final.png", "image/png")
