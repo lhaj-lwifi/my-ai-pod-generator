@@ -4,85 +4,78 @@ from rembg import remove
 import PIL.Image
 import io
 
-# إعداد الصفحة
-st.set_page_config(page_title="Design Ghost PRO", layout="wide", page_icon="🎨")
-st.title("🎨 Professional AI Design Studio")
+# إعداد واجهة الموقع
+st.set_page_config(page_title="Design Ghost 3-Step", layout="wide")
+st.title("🛠️ 3-Step Design Workflow (Pro Edition)")
 
-# القائمة الجانبية
+# القائمة الجانبية للإعدادات
 with st.sidebar:
-    st.header("⚙️ Configuration")
+    st.header("⚙️ API Configuration")
     api_key = st.text_input("Enter Google API Key", type="password")
     st.divider()
     pod_style = st.selectbox("Style Preset", 
-        ["Vector Sticker", "Vintage Illustration", "Cute Kawaii", "Dark Indie Horror", "SCP Style"])
-    num_images = st.slider("Number of Variations", 1, 4, 4)
+        ["Vector Sticker", "Vintage Illustration", "Cute Kawaii", "Dark Indie Horror", "SCP Concept"])
 
-# 1. إدارة حالة الصور (Session State) باش ما يغبروش ملي نضغطو على زر
-if 'generated_images' not in st.session_state:
-    st.session_state.generated_images = []
-if 'last_niche' not in st.session_state:
-    st.session_state.last_niche = ""
+# إدارة حالة الصور (Memory)
+if 'raw_img' not in st.session_state: st.session_state.raw_img = None
+if 'upscaled_img' not in st.session_state: st.session_state.upscaled_img = None
+if 'final_img' not in st.session_state: st.session_state.final_img = None
 
-# واجهة إدخال النيش
-niche_input = st.text_input("Enter your Niche:", placeholder="e.g. SCP-049 Mascot")
+# --- STAGE 1: DESIGN GENERATION ---
+st.header("1️⃣ Step: Generate Design")
+niche_input = st.text_input("Niche Topic:", placeholder="e.g. SCP-049 Plague Doctor")
 
-if st.button("Generate Variations 🚀"):
+if st.button("Generate Image 🚀"):
     if api_key and niche_input:
         try:
             client = genai.Client(api_key=api_key)
-            with st.spinner(f"Generating {num_images} variations..."):
-                prompt_task = f"High-quality T-shirt design, '{niche_input}', {pod_style}, white background, bold lines, vector art."
-                res = client.models.generate_content(model="gemini-2.5-flash", contents=prompt_task)
+            with st.spinner("Drawing..."):
+                prompt = f"Professional T-shirt design, '{niche_input}', {pod_style}, white background, bold clean lines, vector art."
+                res = client.models.generate_images(model="imagen-4.0-generate-001", prompt=prompt, config={"number_of_images": 1})
                 
-                img_res = client.models.generate_images(
-                    model="imagen-4.0-generate-001", 
-                    prompt=res.text,
-                    config={"number_of_images": num_images}
-                )
-                
-                # حفظ الصور في الـ Session State
-                st.session_state.generated_images = [img.image for img in img_res.generated_images]
-                st.session_state.last_niche = niche_input
-                st.session_state.seo_text = res.text
+                # حفظ الصورة الخام
+                img_data = io.BytesIO(res.generated_images.image)
+                st.session_state.raw_img = PIL.Image.open(img_data)
+                # ريست للمراحل الجاية
+                st.session_state.upscaled_img = None
+                st.session_state.final_img = None
         except Exception as e:
             st.error(f"Error: {e}")
     else:
-        st.error("Please provide API Key and Niche.")
+        st.error("Missing API Key or Niche!")
 
-# 2. عرض الصور (الـ Gallery) ومعالجتها بشكل منفصل
-if st.session_state.generated_images:
+if st.session_state.raw_img:
+    st.image(st.session_state.raw_img, caption="Raw Generation (1024x1024)", width=300)
+
+    # --- STAGE 2: UPSCALE ---
     st.divider()
-    st.subheader(f"Results for: {st.session_state.last_niche}")
-    
-    cols = st.columns(2)
-    for idx, img_data in enumerate(st.session_state.generated_images):
-        with cols[idx % 2]:
-            # تحويل البيانات لصورة PIL للعرض
-            pil_img = PIL.Image.open(io.BytesIO(img_data))
-            st.image(pil_img, caption=f"Option {idx+1}", use_container_width=True)
+    st.header("2️⃣ Step: Upscale to 4500x5400px")
+    if st.button("Upscale for Merch by Amazon 📐"):
+        with st.spinner("Resizing to 4500x5400..."):
+            # تكبير الصورة باستعمال LANCZOS لأفضل جودة حواف
+            st.session_state.upscaled_img = st.session_state.raw_img.resize((4500, 5400), PIL.Image.Resampling.LANCZOS)
+            st.success("Upscaling Complete!")
+
+    if st.session_state.upscaled_img:
+        st.info("Image is now 4500x5400px. High resolution ready.")
+
+        # --- STAGE 3: REMOVE BACKGROUND ---
+        st.divider()
+        st.header("3️⃣ Step: Remove Background")
+        if st.button("Make Transparent ✂️"):
+            with st.spinner("Removing background..."):
+                st.session_state.final_img = remove(st.session_state.upscaled_img)
+                st.success("Background Removed!")
+
+        if st.session_state.final_img:
+            st.image(st.session_state.final_img, caption="Final Transparent PNG", width=300)
             
-            # زر معالجة هاد الصورة بوحدها
-            if st.button(f"🪄 Process Option {idx+1}", key=f"proc_{idx}"):
-                with st.spinner("Removing background & Upscaling to 4500x5400px..."):
-                    # إزالة الخلفية
-                    no_bg = remove(pil_img)
-                    # التكبير لمقاسات Merch by Amazon
-                    final_img = no_bg.resize((4500, 5400), PIL.Image.LANCZOS)
-                    
-                    st.success("Ready for Upload!")
-                    st.image(final_img, caption="Final Transparent PNG", width=300)
-                    
-                    # زر التحميل النهائي
-                    buf = io.BytesIO()
-                    final_img.save(buf, format="PNG")
-                    st.download_button(
-                        label=f"💾 Download Final PNG",
-                        data=buf.getvalue(),
-                        file_name=f"{st.session_state.last_niche}_final.png",
-                        mime="image/png",
-                        key=f"dl_{idx}"
-                    )
-
-    st.divider()
-    st.subheader("SEO Metadata")
-    st.info(st.session_state.get('seo_text', ''))
+            # زر التحميل النهائي
+            buf = io.BytesIO()
+            st.session_state.final_img.save(buf, format="PNG")
+            st.download_button(
+                label="📥 Download Final Design",
+                data=buf.getvalue(),
+                file_name=f"{niche_input.replace(' ', '_')}_final.png",
+                mime="image/png"
+            )
