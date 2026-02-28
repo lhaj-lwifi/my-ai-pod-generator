@@ -19,24 +19,36 @@ niches_text = st.text_area("Enter Niches (One per line):", placeholder="Example:
 
 if st.button("Start Bulk Generation"):
     if api_key and niches_text:
-        client = genai.Client(api_key=api_key)
-        for niche in niches_text.split('\n'):
-            if not niche.strip(): continue
-            with st.status(f"Processing: {niche}"):
-                # Prompt Generation
-                prompt = f"Professional T-shirt design, '{niche}', {pod_style}, white background, high contrast."
-                res = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
-                
-                # Image Generation
-                img_res = client.models.generate_images(model="imagen-4.0-generate-001", prompt=res.text)
-                final_img = remove(img_res.generated_images.image)
-                
-                if upscale:
-                    final_img = final_img.resize((4500, 5400), PIL.Image.LANCZOS)
-                
-                st.image(final_img, caption=niche, width=250)
-                buf = io.BytesIO()
-                final_img.save(buf, format="PNG")
-                st.download_button(f"Download {niche}", buf.getvalue(), f"{niche}.png", "image/png")
+        try:
+            client = genai.Client(api_key=api_key)
+            for niche in niches_text.split('\n'):
+                if not niche.strip(): continue
+                with st.status(f"Processing: {niche}"):
+                    # 1. تحويل النيش لـ Prompt احترافي
+                    prompt_task = f"Create a T-shirt design prompt for: '{niche}'. Style: {pod_style}, white background."
+                    res = client.models.generate_content(model="gemini-2.5-flash", contents=prompt_task)
+                    
+                    # 2. رسم الصورة
+                    img_res = client.models.generate_images(model="imagen-4.0-generate-001", prompt=res.text)
+                    
+                    # التصحيح هنا: زدنا باش ناخدو أول صورة من القائمة
+                    raw_image = img_res.generated_images.image
+                    
+                    # 3. إزالة الخلفية
+                    final_img = remove(raw_image)
+                    
+                    # 4. تغيير المقاسات لـ Amazon (4500x5400)
+                    if upscale:
+                        final_img = final_img.resize((4500, 5400), PIL.Image.LANCZOS)
+                    
+                    # عرض النتيجة
+                    st.image(final_img, caption=niche, width=300)
+                    
+                    # إعداد التحميل
+                    buf = io.BytesIO()
+                    final_img.save(buf, format="PNG")
+                    st.download_button(f"Download {niche}", buf.getvalue(), f"{niche}.png", "image/png")
+        except Exception as e:
+            st.error(f"Error: {e}")
     else:
         st.error("Please fill in the API Key and Niches!")
