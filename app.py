@@ -4,65 +4,73 @@ from rembg import remove
 import PIL.Image
 import io
 
-# إعداد الصفحة
+# إعداد الصفحة لتكون عريضة واحترافية
 st.set_page_config(page_title="POD Design Master", layout="wide")
 st.title("🎨 AI Design Generator - Professional Dashboard")
 
-# القائمة الجانبية
+# القائمة الجانبية (Sidebar)
 with st.sidebar:
     st.header("⚙️ Configuration")
     api_key = st.text_input("Enter Google API Key", type="password")
     st.divider()
+    st.header("🎨 Style Settings")
     pod_style = st.selectbox("Style Preset", 
         ["Vector Sticker", "Vintage Illustration", "Cute Kawaii", "Dark Indie Horror", "Science Doodle"])
     upscale = st.checkbox("Resizing for Amazon (4500x5400px)", value=True)
 
-# واجهة إدخال النيشات
-niches_text = st.text_area("Enter Niches (One per line):", placeholder="Example:\nSCP-049 Plague Doctor\nFunny Coding Joke")
+# واجهة إدخال النيشات (Bulk Input)
+niches_text = st.text_area("Enter Niches (One per line):", placeholder="Example:\nSCP-049 Plague Doctor\nFunny Coding Joke\nIndie Horror Monster", height=200)
 
-if st.button("Start Bulk Generation"):
+if st.button("Start Bulk Generation 🚀"):
     if api_key and niches_text:
         try:
             client = genai.Client(api_key=api_key)
-            for niche in niches_text.split('\n'):
-                if not niche.strip(): continue
-                
+            niches = [n.strip() for n in niches_text.split('\n') if n.strip()]
+            
+            for niche in niches:
                 with st.status(f"Working on: {niche}"):
-                    # 1. إنشاء الـ Prompt والـ SEO
-                    st.write("Generating Prompt & Tags...")
+                    # 1. إنشاء الـ Prompt والـ SEO باستعمال Gemini
+                    st.write("Generating Prompt & SEO Tags...")
                     seo_task = f"Create a T-shirt design prompt, an SEO Title, and 15 tags for: '{niche}'. Style: {pod_style}. Return it clearly."
                     res = client.models.generate_content(model="gemini-2.5-flash", contents=seo_task)
                     
                     # 2. رسم الصورة (Imagen 4.0)
-                    st.write("Drawing Image...")
-                    img_res = client.models.generate_images(model="imagen-4.0-generate-001", prompt=res.text)
+                    st.write("Drawing Image with Imagen 4.0...")
+                    img_res = client.models.generate_images(
+                        model="imagen-4.0-generate-001", 
+                        prompt=res.text,
+                        config={"number_of_images": 1}
+                    )
                     
-                    # ✅ الحل: أخد أول صورة من القائمة باستعمال
+                    # ✅ التصحيح هنا: أخد أول صورة من القائمة باستعمال
                     raw_image = img_res.generated_images.image
                     
                     # 3. إزالة الخلفية
                     st.write("Removing Background...")
                     no_bg_img = remove(raw_image)
                     
-                    # 4. التكبير لمقاسات أمازون
+                    # 4. التكبير لمقاسات أمازون (4500x5400)
                     if upscale:
-                        st.write("Upscaling to 4500x5400...")
+                        st.write("Upscaling to 4500x5400px...")
                         final_img = no_bg_img.resize((4500, 5400), PIL.Image.LANCZOS)
                     else:
                         final_img = no_bg_img
                     
                     # عرض النتائج في الموقع
+                    st.divider()
                     col1, col2 = st.columns()
                     with col1:
-                        st.image(final_img, width=250)
+                        st.image(final_img, caption=f"Design for: {niche}", use_container_width=True)
                     with col2:
-                        st.subheader(f"SEO for: {niche}")
-                        st.info(res.text) # عرض التاغات والعنوان
+                        st.subheader(f"SEO Pack: {niche}")
+                        st.text_area(f"Copy SEO for {niche}:", value=res.text, height=150)
                     
-                    # زر التحميل
+                    # إعداد زر التحميل
                     buf = io.BytesIO()
                     final_img.save(buf, format="PNG")
                     st.download_button(f"Download PNG: {niche}", buf.getvalue(), f"{niche}.png", "image/png")
+                    
+            st.balloons() # احتفال بانتهاء العمل
                     
         except Exception as e:
             st.error(f"Error Details: {e}")
