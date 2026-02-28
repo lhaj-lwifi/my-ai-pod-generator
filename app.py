@@ -31,7 +31,7 @@ if st.button("Start Bulk Generation"):
                     # 2. رسم الصورة
                     img_res = client.models.generate_images(model="imagen-4.0-generate-001", prompt=res.text)
                     
-                    # التصحيح هنا: زدنا باش ناخدو أول صورة من القائمة
+                    # ✅ التصحيح هنا: زدنا باش ناخدو أول صورة من القائمة
                     raw_image = img_res.generated_images.image
                     
                     # 3. إزالة الخلفية
