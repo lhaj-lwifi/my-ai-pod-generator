@@ -8,26 +8,25 @@ import io
 # ==========================================
 st.set_page_config(page_title="AI Design Studio PRO", layout="wide", page_icon="🎨")
 
+# السحر ديال CSS باش نغبرو الهضرة الزايدة ونقادو الشكل
 st.markdown("""
     <style>
         /* Compact layout */
-        .block-container {
-            padding-top: 1.5rem !important;
-            padding-bottom: 1rem !important;
-            max-width: 98% !important;
-        }
+        .block-container { padding-top: 1.5rem !important; padding-bottom: 1rem !important; max-width: 98% !important; }
         
-        /* 🪄 HIDE ANNOYING UPLOADER TEXT */
-        [data-testid="stFileUploadDropzone"] > div > div > span { display: none !important; }
+        /* إخفاء جملة Drag and drop و Limit 200MB */
+        [data-testid="stFileUploadDropzone"] > div > div > span,
         [data-testid="stFileUploadDropzone"] > div > div > small { display: none !important; }
         
-        /* Make the uploader box smaller and cleaner */
+        /* تصغير مربع الرفع باش يجي مقاد */
         [data-testid="stFileUploadDropzone"] {
             padding: 5px !important;
             min-height: 50px !important;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        }
+        
+        /* تجميل زر Upload */
+        [data-testid="stFileUploadDropzone"] button {
+            width: 100% !important;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -45,7 +44,7 @@ with st.sidebar:
     st.info("💡 Tip: Download the results and use Canva's BG Remover for perfect edges.")
 
 # ==========================================
-# STATE MANAGEMENT & IMAGE PROCESSING
+# STATE MANAGEMENT
 # ==========================================
 if 'generated_designs' not in st.session_state:
     st.session_state.generated_designs = []
@@ -65,9 +64,6 @@ def save_designs(response_images):
         except Exception as e:
             st.error(f"Error extracting image: {e}")
 
-# ==========================================
-# TABS INTERFACE
-# ==========================================
 tab1, tab2 = st.tabs(["✍️ 1. Text to Design", "🖼️ 2. Niche + Style Mixer (PRO)"])
 
 # ------------------------------------------
@@ -98,27 +94,40 @@ with tab1:
             st.error("Please enter API Key and Niche.")
 
 # ------------------------------------------
-# TAB 2: NICHE + STYLE MIXER
+# TAB 2: NICHE + STYLE MIXER (THE FIX)
 # ------------------------------------------
 with tab2:
-    st.caption("Upload subject (Niche) and reference (Style) to create something unique.")
+    st.caption("Upload subject and reference to create something unique.")
     
-    col_niche, col_style = st.columns(2)
+    # التقسيم الرئيسي (نص للنيش ونص للستايل)
+    col_niche_main, col_style_main, col_btn = st.columns([2, 2, 1])
     
-    with col_niche:
-        niche_file = st.file_uploader("Niche", type=["png", "jpg", "jpeg"])
-        # Preview the uploaded image exactly where you wanted it
-        if niche_file: 
-            st.image(niche_file, use_container_width=True)
-            
-    with col_style:
-        style_file = st.file_uploader("Style", type=["png", "jpg", "jpeg"])
-        # Preview the uploaded image exactly where you wanted it
-        if style_file: 
-            st.image(style_file, use_container_width=True)
+    # جهة النيش
+    with col_niche_main:
+        st.markdown("**Niche**") # عنوان نقي
+        # التقسيم الداخلي: زر الرفع على اليسار، والصورة (المربع الأحمر) على اليمين
+        col_upload_1, col_preview_1 = st.columns([2, 1])
+        with col_upload_1:
+            niche_file = st.file_uploader("Niche Uploader", type=["png", "jpg", "jpeg"], label_visibility="collapsed")
+        with col_preview_1:
+            if niche_file: 
+                st.image(niche_file, use_container_width=True) # التصويرة غتبان صغيرة فهاد البلاصة
+
+    # جهة الستايل
+    with col_style_main:
+        st.markdown("**Style**") # عنوان نقي
+        # التقسيم الداخلي: زر الرفع على اليسار، والصورة (المربع الأحمر) على اليمين
+        col_upload_2, col_preview_2 = st.columns([2, 1])
+        with col_upload_2:
+            style_file = st.file_uploader("Style Uploader", type=["png", "jpg", "jpeg"], label_visibility="collapsed")
+        with col_preview_2:
+            if style_file: 
+                st.image(style_file, use_container_width=True) # التصويرة غتبان صغيرة فهاد البلاصة
         
-    st.write("") # Spacing
-    btn_mix = st.button("Mix & Generate Design 🪄", use_container_width=True)
+    with col_btn:
+        st.write("")
+        st.write("")
+        btn_mix = st.button("Mix Images 🪄", use_container_width=True)
         
     if btn_mix:
         if api_key and niche_file and style_file:
@@ -157,7 +166,6 @@ if st.session_state.generated_designs:
             st.session_state.generated_designs = []
             st.rerun()
 
-    # Dynamic columns based on number of variations
     cols = st.columns(len(st.session_state.generated_designs))
     for idx, pil_img in enumerate(st.session_state.generated_designs):
         with cols[idx]:
