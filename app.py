@@ -35,7 +35,7 @@ def save_designs(response_images):
 tab1, tab2 = st.tabs(["✍️ 1. Text to Design", "🖼️ 2. Niche + Style Mixer (PRO)"])
 
 # ==========================================
-# TAB 1: TEXT TO DESIGN (SIMPLE & EFFECTIVE)
+# TAB 1: TEXT TO DESIGN
 # ==========================================
 with tab1:
     st.header("Create from Text")
@@ -50,9 +50,7 @@ with tab1:
             try:
                 client = genai.Client(api_key=api_key)
                 with st.spinner("Drawing on a solid grey background..."):
-                    # أمر مباشر وبسيط جداً بحال ميرش جوست
                     prompt = f"Professional T-shirt design, '{niche_text}', {pod_style}, clean vector art. The design is placed completely on a flat, solid grey background."
-                    
                     res = client.models.generate_images(model="imagen-4.0-generate-001", prompt=prompt, config={"number_of_images": num_vars})
                     save_designs(res.generated_images)
                     st.success("Designs Ready!")
@@ -83,7 +81,6 @@ with tab2:
                 style_img = PIL.Image.open(style_file)
                 
                 with st.spinner("Analyzing and drawing..."):
-                    # إعطاء أمر بسيط لـ Gemini باش يختم الوصف بالخلفية الرمادية
                     vision_prompt = "You are an expert Print-on-Demand designer. Look at Image 1 (Subject) and Image 2 (Style). Write a prompt to generate a vector T-shirt design featuring the subject from Image 1 in the exact style of Image 2. IMPORTANT: Do not describe the background of Image 2. End your prompt exactly with: 'The entire design is placed on a simple, flat, solid grey background.'"
                     
                     vision_res = client.models.generate_content(
@@ -101,22 +98,34 @@ with tab2:
             st.error("Please enter API Key and upload BOTH images.")
 
 # ==========================================
-# RESULTS GALLERY
+# RESULTS GALLERY (COMPACT VIEW)
 # ==========================================
 if st.session_state.generated_designs:
     st.markdown("---")
-    st.subheader("🖼️ Your Generated Designs")
-    cols = st.columns(2)
-    for idx, pil_img in enumerate(st.session_state.generated_designs):
-        with cols[idx % 2]:
-            st.image(pil_img, caption=f"Variation {idx+1}", use_container_width=True)
-            
-            buf = io.BytesIO()
-            pil_img.save(buf, format="PNG")
-            st.download_button(
-                label=f"📥 Download Design {idx+1}",
-                data=buf.getvalue(),
-                file_name=f"Design_Raw_v{idx+1}.png",
-                mime="image/png",
-                key=f"dl_btn_{idx}"
-            )
+    
+    # صف فيه العنوان وزر التنظيف
+    col_title, col_clear = st.columns([4, 1])
+    with col_title:
+        st.subheader("🖼️ Your Generated Designs")
+    with col_clear:
+        # زر باش تمسح الذاكرة وترجع الشاشة نقية
+        if st.button("🧹 Clear Gallery"):
+            st.session_state.generated_designs = []
+            st.rerun()
+
+    # عرض 4 تصاور في سطر واحد باش نتفاداو الـ Scrolling
+    if st.session_state.generated_designs:
+        cols = st.columns(len(st.session_state.generated_designs)) # كيقسم الأعمدة على حساب شحال من صورة عندك
+        for idx, pil_img in enumerate(st.session_state.generated_designs):
+            with cols[idx]:
+                st.image(pil_img, use_container_width=True)
+                
+                buf = io.BytesIO()
+                pil_img.save(buf, format="PNG")
+                st.download_button(
+                    label=f"📥 Download {idx+1}",
+                    data=buf.getvalue(),
+                    file_name=f"Design_Raw_v{idx+1}.png",
+                    mime="image/png",
+                    key=f"dl_btn_{idx}"
+                )
