@@ -1,21 +1,12 @@
 import streamlit as st
 from google import genai
-from rembg import remove, new_session # زدنا new_session هنا
+from rembg import remove
 import PIL.Image
 import io
 
-# تفعيل الموديل الاحترافي (غادي يتشارجا أول مرة تخدمو)
-@st.cache_resource
-def get_pro_session():
-    return new_session("isnet-general-use")
-
-pro_session = get_pro_session()
-
-# إعداد واجهة الموقع
 st.set_page_config(page_title="Design Ghost Studio PRO", layout="wide", page_icon="🎨")
 st.title("🎨 AI Design Generator - Pro Studio")
 
-# القائمة الجانبية للإعدادات
 with st.sidebar:
     st.header("⚙️ Configuration")
     api_key = st.text_input("Enter Google API Key", type="password")
@@ -24,13 +15,11 @@ with st.sidebar:
         ["Vector Sticker", "Vintage Illustration", "Cute Kawaii", "Dark Indie Horror", "Minimalist Typography"])
     num_vars = st.slider("Number of Variations", 1, 4, 4)
 
-# إدارة الذاكرة باش التصاور ما يغبروش
 if 'all_variants' not in st.session_state: st.session_state.all_variants = []
 if 'selected_img' not in st.session_state: st.session_state.selected_img = None
 if 'upscaled_img' not in st.session_state: st.session_state.upscaled_img = None
 if 'final_png' not in st.session_state: st.session_state.final_png = None
 
-# دالة لمسح الذاكرة وبدء نيش جديد
 def reset_studio():
     st.session_state.all_variants = []
     st.session_state.selected_img = None
@@ -43,7 +32,7 @@ col_input, col_reset = st.columns([4, 1])
 with col_input:
     niche_input = st.text_input("Design Niche:", placeholder="e.g. Funny programming quote")
 with col_reset:
-    st.write("") # فراغ باش يجي الزر مقاد مع خانة الإدخال
+    st.write("")
     st.write("")
     if st.button("🔄 Start Fresh"):
         reset_studio()
@@ -51,12 +40,12 @@ with col_reset:
 
 if st.button("Generate Designs 🚀"):
     if api_key and niche_input:
-        reset_studio() # مسح القديم أوتوماتيكيا قبل بدء الجديد
+        reset_studio()
         try:
             client = genai.Client(api_key=api_key)
             with st.spinner(f"Drawing {num_vars} pro options..."):
-                # هندسة أوامر صارمة بخلفية رمادية لتسهيل العزل
-                prompt = f"Professional T-shirt design, '{niche_input}', {pod_style}, centered completely within frame, no cut-off edges, isolated on a solid flat neutral grey background (#808080), absolutely no gradients or shadows on the background, vector art style, perfect typography and correct spelling."
+                # ✅ Prompt بالخلفية الرمادية لتسهيل العزل
+                prompt = f"Professional T-shirt design, '{niche_input}', {pod_style}, centered completely within frame, isolated on a solid flat neutral grey background (#808080), absolutely no gradients or shadows on the background, vector art style, perfect typography and correct spelling."
                 
                 res = client.models.generate_images(model="imagen-4.0-generate-001", prompt=prompt, config={"number_of_images": num_vars})
                 
@@ -101,34 +90,31 @@ if st.session_state.upscaled_img:
     st.header("3️⃣ Step: Transparent Background & Preview")
     
     if st.button("Remove Background ✂️"):
-        with st.spinner("Using ISNET Pro Model & Alpha Matting..."):
-            # العزل الاحترافي بالماطينغ
+        with st.spinner("Creating perfect transparent PNG with Alpha Matting..."):
+            # ✅ الحل: استخدام الموديل العادي ولكن مع تفعيل Alpha Matting باش الحواف يخرجو ناضيين
             st.session_state.final_png = remove(
                 st.session_state.upscaled_img,
-                session=pro_session,
                 alpha_matting=True,
                 alpha_matting_foreground_threshold=240,
                 alpha_matting_background_threshold=10,
                 alpha_matting_erode_size=5
             )
-            st.success("Pro Background Removed!")
+            st.success("Background Removed!")
 
 if st.session_state.final_png:
     st.write("---")
     st.subheader("👕 T-Shirt Preview")
     
-    # ميزة المعاينة على الألوان
     preview_col1, preview_col2 = st.columns(2)
     with preview_col1:
         st.write("On Black Background")
-        # إنشاء خلفية كحلة ودمج الصورة الشفافة فوقها
         black_bg = PIL.Image.new("RGB", st.session_state.final_png.size, (0, 0, 0))
         black_bg.paste(st.session_state.final_png, (0, 0), st.session_state.final_png)
         st.image(black_bg, use_container_width=True)
         
     with preview_col2:
         st.write("On White Background")
-        st.image(st.session_state.final_png, use_container_width=True) # الصورة الشفافة أصلا كتبان بيضاء في المتصفح
+        st.image(st.session_state.final_png, use_container_width=True)
 
     st.write("---")
     buf = io.BytesIO()
@@ -136,7 +122,7 @@ if st.session_state.final_png:
     st.download_button(
         label="📥 Download Final High-Res PNG", 
         data=buf.getvalue(), 
-        file_name=f"Design_{niche_input.replace(' ', '_')}.png", 
+        file_name=f"Design_Pro.png", 
         mime="image/png",
         use_container_width=True
     )
