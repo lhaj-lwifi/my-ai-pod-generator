@@ -1,8 +1,15 @@
 import streamlit as st
 from google import genai
-from rembg import remove
+from rembg import remove, new_session # زدنا new_session هنا
 import PIL.Image
 import io
+
+# تفعيل الموديل الاحترافي (غادي يتشارجا أول مرة تخدمو)
+@st.cache_resource
+def get_pro_session():
+    return new_session("isnet-general-use")
+
+pro_session = get_pro_session()
 
 # إعداد واجهة الموقع
 st.set_page_config(page_title="Design Ghost Studio PRO", layout="wide", page_icon="🎨")
