@@ -4,58 +4,44 @@ import PIL.Image
 import io
 
 # ==========================================
-# PAGE CONFIG & CSS HACKS (UI Polish)
+# PAGE CONFIG & HARDCORE CSS HACKS
 # ==========================================
 st.set_page_config(page_title="AI Design Studio PRO", layout="wide", page_icon="🎨")
 
-# السحر ديال CSS باش نغبرو الهضرة الزايدة ونقادو الشكل
 st.markdown("""
     <style>
         /* Compact layout */
-        .block-container { padding-top: 1.5rem !important; padding-bottom: 1rem !important; max-width: 98% !important; }
+        .block-container { padding-top: 1.5rem !important; padding-bottom: 1rem !important; max-width: 95% !important; }
         
-        /* إخفاء جملة Drag and drop و Limit 200MB */
+        /* 🪄 HIDE ANNOYING UPLOADER TEXT (Drag & Drop, Size Limit) */
         [data-testid="stFileUploadDropzone"] > div > div > span,
         [data-testid="stFileUploadDropzone"] > div > div > small { display: none !important; }
         
-        /* تصغير مربع الرفع باش يجي مقاد */
+        /* Make the uploader box look like a compact button area */
         [data-testid="stFileUploadDropzone"] {
             padding: 5px !important;
-            min-height: 50px !important;
+            min-height: auto !important;
+            border: 1px dashed #555 !important;
         }
         
-        /* تجميل زر Upload */
-        [data-testid="stFileUploadDropzone"] button {
-            width: 100% !important;
-        }
+        /* Center download buttons perfectly under images */
+        .stDownloadButton { text-align: center; }
+        .stDownloadButton button { width: 100%; border-radius: 5px; }
     </style>
 """, unsafe_allow_html=True)
-
-st.title("🎨 AI Design Generator - Pro Studio")
-st.markdown("##### *Optimized for Creation (Upscaling & BG Removal handled in Canva)*")
-
-# ==========================================
-# SIDEBAR CONFIGURATION
-# ==========================================
-with st.sidebar:
-    st.header("⚙️ Configuration")
-    api_key = st.text_input("Enter Google API Key", type="password")
-    num_vars = st.slider("Number of Variations", 1, 4, 4)
-    st.info("💡 Tip: Download the results and use Canva's BG Remover for perfect edges.")
 
 # ==========================================
 # STATE MANAGEMENT
 # ==========================================
-if 'generated_designs' not in st.session_state:
-    st.session_state.generated_designs = []
+if 'generated_designs' not in st.session_state: st.session_state.generated_designs = []
+if 'smart_prompt' not in st.session_state: st.session_state.smart_prompt = ""
 
 def save_designs(response_images):
     st.session_state.generated_designs = []
     for g_img in response_images:
         try:
             if hasattr(g_img, 'image') and hasattr(g_img.image, 'image_bytes'):
-                raw_bytes = g_img.image.image_bytes
-                pil_img = PIL.Image.open(io.BytesIO(raw_bytes))
+                pil_img = PIL.Image.open(io.BytesIO(g_img.image.image_bytes))
             elif isinstance(g_img.image, bytes):
                 pil_img = PIL.Image.open(io.BytesIO(g_img.image))
             else:
@@ -63,6 +49,22 @@ def save_designs(response_images):
             st.session_state.generated_designs.append(pil_img)
         except Exception as e:
             st.error(f"Error extracting image: {e}")
+
+# ==========================================
+# SIDEBAR
+# ==========================================
+with st.sidebar:
+    st.header("⚙️ Configuration")
+    api_key = st.text_input("Enter Google API Key", type="password")
+    num_vars = st.slider("Number of Variations", 1, 4, 4)
+    st.write("---")
+    st.info("💡 **Tip**\n\nUse Canva's background remover to get perfect clean edges for your designs. Upscaling can also be handled there.")
+
+# ==========================================
+# MAIN HEADER
+# ==========================================
+st.title("🎨 AI Design Generator - Pro Studio")
+st.markdown("##### *Optimized for Creation (Upscaling & BG Removal handled in Canva)*")
 
 tab1, tab2 = st.tabs(["✍️ 1. Text to Design", "🖼️ 2. Niche + Style Mixer (PRO)"])
 
@@ -88,47 +90,42 @@ with tab1:
                     prompt = f"Professional T-shirt design, '{niche_text}', {pod_style}, clean vector art. The design is placed completely on a flat, solid grey background."
                     res = client.models.generate_images(model="imagen-4.0-generate-001", prompt=prompt, config={"number_of_images": num_vars})
                     save_designs(res.generated_images)
+                    st.session_state.smart_prompt = prompt
             except Exception as e:
                 st.error(f"Generation Error: {e}")
         else:
             st.error("Please enter API Key and Niche.")
 
 # ------------------------------------------
-# TAB 2: NICHE + STYLE MIXER (THE FIX)
+# TAB 2: NICHE + STYLE MIXER (EXACTLY AS MOCKUP)
 # ------------------------------------------
 with tab2:
-    st.caption("Upload subject and reference to create something unique.")
+    st.write("This area allows you to upload subject (Niche) and a reference (Style) to create something unique.")
     
-    # التقسيم الرئيسي (نص للنيش ونص للستايل)
-    col_niche_main, col_style_main, col_btn = st.columns([2, 2, 1])
+    col_niche, col_style = st.columns(2)
     
-    # جهة النيش
-    with col_niche_main:
-        st.markdown("**Niche**") # عنوان نقي
-        # التقسيم الداخلي: زر الرفع على اليسار، والصورة (المربع الأحمر) على اليمين
-        col_upload_1, col_preview_1 = st.columns([2, 1])
-        with col_upload_1:
-            niche_file = st.file_uploader("Niche Uploader", type=["png", "jpg", "jpeg"], label_visibility="collapsed")
-        with col_preview_1:
-            if niche_file: 
-                st.image(niche_file, use_container_width=True) # التصويرة غتبان صغيرة فهاد البلاصة
+    with col_niche:
+        st.markdown("**Niche**")
+        niche_file = st.file_uploader("Niche Upload", type=["png", "jpg", "jpeg"], label_visibility="collapsed")
+        if niche_file: 
+            st.image(niche_file, width=150) # Thumbnail if needed
+            
+    with col_style:
+        st.markdown("**Style**")
+        style_file = st.file_uploader("Style Upload", type=["png", "jpg", "jpeg"], label_visibility="collapsed")
+        if style_file: 
+            st.image(style_file, width=150) # Thumbnail if needed
+        
+    st.write("")
+    btn_mix = st.button("Mix & Generate Design 🪄")
+        
+    # The Expander exactly like your screenshot
+    with st.expander("🧠 Intermediate Prompt Generation Box"):
+        if st.session_state.smart_prompt:
+            st.write(st.session_state.smart_prompt)
+        else:
+            st.caption("The AI-generated prompt will appear here after processing.")
 
-    # جهة الستايل
-    with col_style_main:
-        st.markdown("**Style**") # عنوان نقي
-        # التقسيم الداخلي: زر الرفع على اليسار، والصورة (المربع الأحمر) على اليمين
-        col_upload_2, col_preview_2 = st.columns([2, 1])
-        with col_upload_2:
-            style_file = st.file_uploader("Style Uploader", type=["png", "jpg", "jpeg"], label_visibility="collapsed")
-        with col_preview_2:
-            if style_file: 
-                st.image(style_file, use_container_width=True) # التصويرة غتبان صغيرة فهاد البلاصة
-        
-    with col_btn:
-        st.write("")
-        st.write("")
-        btn_mix = st.button("Mix Images 🪄", use_container_width=True)
-        
     if btn_mix:
         if api_key and niche_file and style_file:
             try:
@@ -136,41 +133,48 @@ with tab2:
                 niche_img = PIL.Image.open(niche_file)
                 style_img = PIL.Image.open(style_file)
                 
-                with st.spinner("Analyzing and drawing..."):
+                with st.spinner("Analyzing images and generating prompt..."):
                     vision_prompt = "You are an expert Print-on-Demand designer. Look at Image 1 (Subject) and Image 2 (Style). Write a prompt to generate a vector T-shirt design featuring the subject from Image 1 in the exact style of Image 2. IMPORTANT: Do not describe the background of Image 2. End your prompt exactly with: 'The entire design is placed on a simple, flat, solid grey background.'"
                     
                     vision_res = client.models.generate_content(
                         model="gemini-2.5-flash",
                         contents=[niche_img, style_img, vision_prompt]
                     )
-                    smart_prompt = vision_res.text
-                    
-                    res = client.models.generate_images(model="imagen-4.0-generate-001", prompt=smart_prompt, config={"number_of_images": num_vars})
+                    st.session_state.smart_prompt = vision_res.text
+                
+                with st.spinner("Drawing your mixed design..."):
+                    res = client.models.generate_images(model="imagen-4.0-generate-001", prompt=st.session_state.smart_prompt, config={"number_of_images": num_vars})
                     save_designs(res.generated_images)
+                    st.rerun() # Refresh to show the new prompt in the expander immediately
             except Exception as e:
                 st.error(f"Generation Error: {e}")
         else:
             st.error("Please enter API Key and upload BOTH images.")
 
 # ==========================================
-# RESULTS GALLERY (4 IN A ROW + CLEAR BTN)
+# RESULTS GALLERY (EXACTLY AS MOCKUP)
 # ==========================================
 if st.session_state.generated_designs:
     st.markdown("---")
     
-    col_title, col_empty, col_clear = st.columns([3, 5, 2])
+    col_title, col_clear = st.columns([4, 1])
     with col_title:
         st.markdown("#### 🖼️ Your Generated Designs")
     with col_clear:
         if st.button("🧹 Clear Gallery", use_container_width=True):
             st.session_state.generated_designs = []
+            st.session_state.smart_prompt = ""
             st.rerun()
 
+    # 4 Columns for the grid, mirroring the screenshot perfectly
     cols = st.columns(len(st.session_state.generated_designs))
+    
     for idx, pil_img in enumerate(st.session_state.generated_designs):
         with cols[idx]:
+            # Image perfectly contained
             st.image(pil_img, use_container_width=True)
             
+            # Button right underneath
             buf = io.BytesIO()
             pil_img.save(buf, format="PNG")
             st.download_button(
