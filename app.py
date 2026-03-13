@@ -3,30 +3,32 @@ from google import genai
 import PIL.Image
 import io
 
-# إعداد الواجهة لتكون عريضة
-st.set_page_config(page_title="Design Ghost Studio PRO", layout="wide", page_icon="🎨")
+# ==========================================
+# PAGE CONFIG & CSS HACKS (UI Polish)
+# ==========================================
+st.set_page_config(page_title="AI Design Studio PRO", layout="wide", page_icon="🎨")
 
-# ==========================================
-# 🪄 CSS HACK: لجعل الواجهة ملمومة واحترافية
-# ==========================================
 st.markdown("""
     <style>
-        /* تقليل الفراغ الكبير في أعلى وأسفل الصفحة */
+        /* Compact layout */
         .block-container {
             padding-top: 1.5rem !important;
             padding-bottom: 1rem !important;
             max-width: 98% !important;
         }
-        /* تصغير حجم خانة رفع الملفات (Drag and drop) */
-        div[data-testid="stFileUploadDropzone"] {
-            padding: 10px !important;
-            min-height: 80px !important;
+        
+        /* 🪄 HIDE ANNOYING UPLOADER TEXT */
+        [data-testid="stFileUploadDropzone"] > div > div > span { display: none !important; }
+        [data-testid="stFileUploadDropzone"] > div > div > small { display: none !important; }
+        
+        /* Make the uploader box smaller and cleaner */
+        [data-testid="stFileUploadDropzone"] {
+            padding: 5px !important;
+            min-height: 50px !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        /* تصغير العناوين باش ما ياخدوش مساحة */
-        h1 { padding-bottom: 0.5rem !important; }
-        h2, h3 { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; }
-        /* تصغير المسافة بين الأسطر */
-        hr { margin: 10px 0 !important; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -34,7 +36,7 @@ st.title("🎨 AI Design Generator - Pro Studio")
 st.markdown("##### *Optimized for Creation (Upscaling & BG Removal handled in Canva)*")
 
 # ==========================================
-# SIDEBAR
+# SIDEBAR CONFIGURATION
 # ==========================================
 with st.sidebar:
     st.header("⚙️ Configuration")
@@ -42,7 +44,9 @@ with st.sidebar:
     num_vars = st.slider("Number of Variations", 1, 4, 4)
     st.info("💡 Tip: Download the results and use Canva's BG Remover for perfect edges.")
 
-# تخزين الصور
+# ==========================================
+# STATE MANAGEMENT & IMAGE PROCESSING
+# ==========================================
 if 'generated_designs' not in st.session_state:
     st.session_state.generated_designs = []
 
@@ -61,11 +65,14 @@ def save_designs(response_images):
         except Exception as e:
             st.error(f"Error extracting image: {e}")
 
+# ==========================================
+# TABS INTERFACE
+# ==========================================
 tab1, tab2 = st.tabs(["✍️ 1. Text to Design", "🖼️ 2. Niche + Style Mixer (PRO)"])
 
-# ==========================================
+# ------------------------------------------
 # TAB 1: TEXT TO DESIGN
-# ==========================================
+# ------------------------------------------
 with tab1:
     col1, col2, col3 = st.columns([3, 1, 1])
     with col1:
@@ -73,7 +80,7 @@ with tab1:
     with col2:
         pod_style = st.selectbox("Style Preset", ["Vector Sticker", "Vintage Retro", "Dark Indie Horror", "Cute Kawaii"])
     with col3:
-        st.write("") # فراغ باش يجي الزر مقاد مع الخانات
+        st.write("") 
         st.write("")
         btn_generate_text = st.button("Generate 🚀", use_container_width=True)
     
@@ -90,26 +97,28 @@ with tab1:
         else:
             st.error("Please enter API Key and Niche.")
 
-# ==========================================
+# ------------------------------------------
 # TAB 2: NICHE + STYLE MIXER
-# ==========================================
+# ------------------------------------------
 with tab2:
-    st.caption("Upload a subject (Niche) and a reference (Style). The AI will combine them.")
+    st.caption("Upload subject (Niche) and reference (Style) to create something unique.")
     
-    col_niche, col_style, col_btn = st.columns([2, 2, 1])
+    col_niche, col_style = st.columns(2)
     
     with col_niche:
-        niche_file = st.file_uploader("1️⃣ Subject Image", type=["png", "jpg", "jpeg"], label_visibility="collapsed")
-        if niche_file: st.image(niche_file, caption="Subject", width=100)
+        niche_file = st.file_uploader("Niche", type=["png", "jpg", "jpeg"])
+        # Preview the uploaded image exactly where you wanted it
+        if niche_file: 
+            st.image(niche_file, use_container_width=True)
             
     with col_style:
-        style_file = st.file_uploader("2️⃣ Style Image", type=["png", "jpg", "jpeg"], label_visibility="collapsed")
-        if style_file: st.image(style_file, caption="Style", width=100)
+        style_file = st.file_uploader("Style", type=["png", "jpg", "jpeg"])
+        # Preview the uploaded image exactly where you wanted it
+        if style_file: 
+            st.image(style_file, use_container_width=True)
         
-    with col_btn:
-        st.write("")
-        st.write("")
-        btn_mix = st.button("Mix Images 🪄", use_container_width=True)
+    st.write("") # Spacing
+    btn_mix = st.button("Mix & Generate Design 🪄", use_container_width=True)
         
     if btn_mix:
         if api_key and niche_file and style_file:
@@ -135,12 +144,11 @@ with tab2:
             st.error("Please enter API Key and upload BOTH images.")
 
 # ==========================================
-# RESULTS GALLERY (COMPACT VIEW)
+# RESULTS GALLERY (4 IN A ROW + CLEAR BTN)
 # ==========================================
 if st.session_state.generated_designs:
     st.markdown("---")
     
-    # صف فيه العنوان وزر التنظيف مقادين
     col_title, col_empty, col_clear = st.columns([3, 5, 2])
     with col_title:
         st.markdown("#### 🖼️ Your Generated Designs")
@@ -149,7 +157,7 @@ if st.session_state.generated_designs:
             st.session_state.generated_designs = []
             st.rerun()
 
-    # عرض 4 تصاور في سطر واحد
+    # Dynamic columns based on number of variations
     cols = st.columns(len(st.session_state.generated_designs))
     for idx, pil_img in enumerate(st.session_state.generated_designs):
         with cols[idx]:
