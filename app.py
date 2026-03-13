@@ -11,16 +11,7 @@ with st.sidebar:
     st.header("⚙️ Configuration")
     api_key = st.text_input("Enter Google API Key", type="password")
     num_vars = st.slider("Number of Variations", 1, 4, 4)
-    st.divider()
-    
-    # ✅ ميزة جديدة: اختيار لون الكروما (Chroma Key) لتسهيل العزل في كانفا
-    st.header("🎨 Chroma Background")
-    bg_color = st.selectbox(
-        "Force Background Color:", 
-        ["Dark Grey", "Neon Green", "Hot Pink", "Pitch Black"],
-        help="Choose a background color that is NOT in your design to make Canva's BG Remover work perfectly."
-    )
-    st.info("💡 Tip: Download the results and use Canva's BG Remover.")
+    st.info("💡 Tip: Download the results and use Canva's BG Remover for perfect edges.")
 
 # تخزين الصور في الذاكرة
 if 'generated_designs' not in st.session_state:
@@ -44,7 +35,7 @@ def save_designs(response_images):
 tab1, tab2 = st.tabs(["✍️ 1. Text to Design", "🖼️ 2. Niche + Style Mixer (PRO)"])
 
 # ==========================================
-# TAB 1: TEXT TO DESIGN
+# TAB 1: TEXT TO DESIGN (SIMPLE & EFFECTIVE)
 # ==========================================
 with tab1:
     st.header("Create from Text")
@@ -58,9 +49,9 @@ with tab1:
         if api_key and niche_text:
             try:
                 client = genai.Client(api_key=api_key)
-                with st.spinner(f"Drawing on a {bg_color} background..."):
-                    # ✅ أوامر قاهرة للموديل باش يتفادى اللون الأبيض
-                    prompt = f"Vector illustration for a T-shirt, '{niche_text}', style: {pod_style}. CRITICAL INSTRUCTION: The background of the entire image MUST be a completely solid, flat {bg_color.upper()}. ABSOLUTELY NO WHITE BACKGROUND. NO gradients, NO scenery, NO shadows on the background. The subject must be perfectly isolated against this flat {bg_color.upper()} color."
+                with st.spinner("Drawing on a solid grey background..."):
+                    # أمر مباشر وبسيط جداً بحال ميرش جوست
+                    prompt = f"Professional T-shirt design, '{niche_text}', {pod_style}, clean vector art. The design is placed completely on a flat, solid grey background."
                     
                     res = client.models.generate_images(model="imagen-4.0-generate-001", prompt=prompt, config={"number_of_images": num_vars})
                     save_designs(res.generated_images)
@@ -91,9 +82,9 @@ with tab2:
                 niche_img = PIL.Image.open(niche_file)
                 style_img = PIL.Image.open(style_file)
                 
-                with st.spinner("Analyzing style & enforcing background color..."):
-                    # ✅ إجبار Gemini باش يكتب الـ Prompt وفيه أوامر الخلفية الصارمة
-                    vision_prompt = f"You are an expert Print-on-Demand designer. Look at Image 1 (Subject) and Image 2 (Style). Write a prompt to generate a vector T-shirt design. The design MUST feature the main subject from Image 1, drawn entirely in the artistic style of Image 2. CRITICAL RULES: 1. Completely IGNORE the background of Image 2. 2. You MUST end your prompt exactly with this sentence: 'The entire background MUST be a completely solid, flat {bg_color.upper()}. ABSOLUTELY NO WHITE BACKGROUND. NO gradients or scenery. The subject is isolated on this {bg_color.upper()} background.'"
+                with st.spinner("Analyzing and drawing..."):
+                    # إعطاء أمر بسيط لـ Gemini باش يختم الوصف بالخلفية الرمادية
+                    vision_prompt = "You are an expert Print-on-Demand designer. Look at Image 1 (Subject) and Image 2 (Style). Write a prompt to generate a vector T-shirt design featuring the subject from Image 1 in the exact style of Image 2. IMPORTANT: Do not describe the background of Image 2. End your prompt exactly with: 'The entire design is placed on a simple, flat, solid grey background.'"
                     
                     vision_res = client.models.generate_content(
                         model="gemini-2.5-flash",
