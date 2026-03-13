@@ -101,9 +101,17 @@ if st.session_state.upscaled_img:
     st.header("3️⃣ Step: Transparent Background & Preview")
     
     if st.button("Remove Background ✂️"):
-        with st.spinner("Creating perfect transparent PNG..."):
-            st.session_state.final_png = remove(st.session_state.upscaled_img)
-            st.success("Background Removed!")
+        with st.spinner("Using ISNET Pro Model & Alpha Matting..."):
+            # العزل الاحترافي بالماطينغ
+            st.session_state.final_png = remove(
+                st.session_state.upscaled_img,
+                session=pro_session,
+                alpha_matting=True,
+                alpha_matting_foreground_threshold=240,
+                alpha_matting_background_threshold=10,
+                alpha_matting_erode_size=5
+            )
+            st.success("Pro Background Removed!")
 
 if st.session_state.final_png:
     st.write("---")
