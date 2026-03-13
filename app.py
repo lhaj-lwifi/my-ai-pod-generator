@@ -48,8 +48,8 @@ if st.button("Generate Designs 🚀"):
         try:
             client = genai.Client(api_key=api_key)
             with st.spinner(f"Drawing {num_vars} pro options..."):
-                # هندسة أوامر صارمة لضمان جودة الـ Print on Demand
-                prompt = f"Professional T-shirt design, '{niche_input}', {pod_style}, centered completely within frame, no cut-off edges, pure white background, bold clean lines, vector art style, perfect typography and correct spelling."
+                # هندسة أوامر صارمة بخلفية رمادية لتسهيل العزل
+                prompt = f"Professional T-shirt design, '{niche_input}', {pod_style}, centered completely within frame, no cut-off edges, isolated on a solid flat neutral grey background (#808080), absolutely no gradients or shadows on the background, vector art style, perfect typography and correct spelling."
                 
                 res = client.models.generate_images(model="imagen-4.0-generate-001", prompt=prompt, config={"number_of_images": num_vars})
                 
